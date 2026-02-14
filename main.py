@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import re
 
-@register("mcbe_news", "astrbot_plugin_mcbe_news", "从 minecraft.net 官网上定时获取最新的更新 blog 并调用 LLM解析", "1.0.2")
+@register("mcbe_news", "astrbot_plugin_mcbe_news", "从 minecraft.net 官网上定时获取最新的更新 blog 并调用 LLM解析", "1.0.3")
 class MyPlugin(Star):
     
     bedrock_beta_news_api = "https://feedback.minecraft.net/api/v2/help_center/en-us/sections/360001185332/articles.json?sort_by=created_at&sort_order=desc"
@@ -317,16 +317,12 @@ class MyPlugin(Star):
 文章内容：
 {truncated_text}
 
-请用要点形式总结，包括：
-✨ 主要新增功能
-🔧 重要修复的 Bug
-📌 其他值得注意的变化
+请用要点形式总结，包括主要新增功能、重要修复的 Bug 和其他值得注意的变化。
 
 重要要求：
 1. 请使用纯文本格式，不要使用 Markdown 语法（不要使用 **、*、`、#、- 等符号）
-2. 可以使用 emoji 让内容更生动
-3. 每个要点单独一行，使用 • 或 emoji 作为项目符号
-4. 保持简洁明了，但不要忽视细节"""
+2. 每个要点单独一行，仅使用 • 作为项目符号，不要在 • 后面添加额外的 emoji
+3. 保持简洁明了，但不要忽视细节"""
 
             provider_id = self.config.get('llm_provider', None)
             llm_response = await self.context.llm_generate(
