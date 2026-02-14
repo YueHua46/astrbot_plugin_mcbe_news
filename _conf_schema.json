@@ -1,0 +1,32 @@
+{
+    "llm_provider": {
+        "description": "LLM 模型提供商",
+        "type": "string",
+        "_special": "select_provider",
+        "hint": "选择用于总结文章的 LLM 模型提供商"
+    },
+    "group_ids": {
+        "description": "通知群聊 ID 列表",
+        "type": "string",
+        "default": "",
+        "hint": "需要自动发送更新通知的群聊 ID，多个 ID 使用英文逗号分隔，例如: 123456,789012"
+    },
+    "enable_beta_monitor": {
+        "description": "开启 Beta 版本更新监控",
+        "type": "bool",
+        "default": true,
+        "hint": "是否监控 Minecraft 基岩版的 Beta 测试版本更新"
+    },
+    "enable_release_monitor": {
+        "description": "开启正式版更新监控",
+        "type": "bool",
+        "default": true,
+        "hint": "是否监控 Minecraft 基岩版的正式版本更新"
+    },
+    "cron_expression": {
+        "description": "定时监控的 Cron 表达式",
+        "type": "string",
+        "default": "0 */2 * * *",
+        "hint": "定时检查更新的时间设置，默认每2小时检查一次。格式: 分 时 日 月 星期 (例如: '0 */2 * * *' 表示每2小时检查一次)"
+    }
+}

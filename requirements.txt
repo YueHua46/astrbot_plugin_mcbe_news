@@ -1,0 +1,5 @@
+httpx
+pydantic
+astrbot
+beautifulsoup4
+apscheduler
