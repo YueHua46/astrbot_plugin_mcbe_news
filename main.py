@@ -235,12 +235,12 @@ class MyPlugin(Star):
         header = f"📢 {article.title}\n"
         header += f"🗓 发布时间：{article.updated_at.strftime('%Y-%m-%d %H:%M')}\n"
         header += f"🔗 原文链接：{article.html_url}\n"
-        header += "━━━━━━━━━━━━━━━━━━━━\n\n"
+        header += "━━━━━━━━━━━━━━━━━━━━\n"
         
         components.append(Comp.Plain(header))
         
         # AI 总结
-        components.append(Comp.Plain(f"📝 AI 总结：\n{summary}\n\n"))
+        components.append(Comp.Plain(f"\n📝 AI 总结：\n{summary}\n\n"))
         
         # 按照原文顺序提取图片
         content_components = self._extract_content_with_images(soup)
@@ -322,7 +322,11 @@ class MyPlugin(Star):
 🔧 重要修复的 Bug
 📌 其他值得注意的变化
 
-请保持简洁明了，但不要忽视细节。"""
+重要要求：
+1. 请使用纯文本格式，不要使用 Markdown 语法（不要使用 **、*、`、#、- 等符号）
+2. 可以使用 emoji 让内容更生动
+3. 每个要点单独一行，使用 • 或 emoji 作为项目符号
+4. 保持简洁明了，但不要忽视细节"""
 
             provider_id = self.config.get('llm_provider', None)
             llm_response = await self.context.llm_generate(
@@ -364,24 +368,49 @@ class MyPlugin(Star):
     
     @filter.command("mcbe_news")
     async def mcbe_news(self, event: AstrMessageEvent):
-        """获取 MCBE 最新更新 BLOG，并调用 LLM 解析回复"""
+        """获取 MCBE 最新更新 BLOG，并调用 LLM 解析回复
+        
+        用法:
+        /mcbe_news - 获取正式版最新文章（默认）
+        /mcbe_news beta - 获取 Beta 版最新文章
+        /mcbe_news release - 获取正式版最新文章
+        """
         try:
-            logger.info("开始获取最新 MCBE 文章...")
+            # 解析命令参数
+            message_text = event.message_str.strip()
+            version_type = 'Release'  # 默认正式版
+            api_url = self.bedrock_news_api
+            
+            # 检查是否指定了版本类型
+            if 'beta' in message_text.lower():
+                version_type = 'Beta'
+                api_url = self.bedrock_beta_news_api
+            elif 'release' in message_text.lower():
+                version_type = 'Release'
+                api_url = self.bedrock_news_api
+            
+            version_name = "Beta 测试版" if version_type == 'Beta' else "正式版"
+            logger.info(f"开始获取最新 MCBE {version_name}文章...")
             
             # 获取最新文章（使用异步请求）
             async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get(self.bedrock_news_api)
+                resp = await client.get(api_url)
                 resp.raise_for_status()
                 data = ArticleListResponse.model_validate(resp.json())
+                
+                if not data.articles:
+                    yield event.plain_result(f"❌ 未找到 {version_name} 文章")
+                    return
+                
                 article = data.articles[0]
             
             logger.info(f"获取到文章: {article.title}")
             
             # 先发送一条提示消息
-            yield event.plain_result(f"正在为您解析最新的 MCBE 更新文章...\n📰 {article.title}")
+            yield event.plain_result(f"正在为您解析最新的 MCBE {version_name}更新文章...\n📰 {article.title}")
             
             # 创建消息链
-            message_chain = await self._create_article_message(article, 'Release')
+            message_chain = await self._create_article_message(article, version_type)
             
             # 发送消息链
             yield event.chain_result(message_chain.chain)
@@ -390,6 +419,87 @@ class MyPlugin(Star):
         except Exception as e:
             logger.error(f"处理 MCBE 新闻时出错: {str(e)}")
             yield event.plain_result(f"❌ 获取或解析新闻时出错: {str(e)}")
+    
+    @filter.command("mcbe_list")
+    async def mcbe_list(self, event: AstrMessageEvent):
+        """获取最新 n 篇文章的预览列表
+        
+        用法:
+        /mcbe_list - 获取最新 3 篇正式版文章预览（默认）
+        /mcbe_list 5 - 获取最新 5 篇正式版文章预览
+        /mcbe_list beta - 获取最新 3 篇 Beta 版文章预览
+        /mcbe_list beta 5 - 获取最新 5 篇 Beta 版文章预览
+        """
+        try:
+            # 解析命令参数
+            message_text = event.message_str.strip()
+            parts = message_text.split()
+            
+            # 默认值
+            version_type = 'Release'
+            api_url = self.bedrock_news_api
+            count = 3  # 默认 3 篇
+            
+            # 解析参数
+            for part in parts[1:]:  # 跳过命令本身
+                if part.lower() == 'beta':
+                    version_type = 'Beta'
+                    api_url = self.bedrock_beta_news_api
+                elif part.lower() == 'release':
+                    version_type = 'Release'
+                    api_url = self.bedrock_news_api
+                elif part.isdigit():
+                    count = min(int(part), 5)  # 最多 5 篇
+            
+            version_name = "Beta 测试版" if version_type == 'Beta' else "正式版"
+            yield event.plain_result(f"🔍 正在获取最新 {count} 篇 MCBE {version_name}文章...")
+            
+            # 获取文章列表
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(api_url)
+                resp.raise_for_status()
+                data = ArticleListResponse.model_validate(resp.json())
+                
+                if not data.articles:
+                    yield event.plain_result(f"❌ 未找到 {version_name} 文章")
+                    return
+                
+                # 获取指定数量的文章
+                articles = data.articles[:count]
+            
+            # 构建预览列表
+            result = f"📋 最新 {len(articles)} 篇 MCBE {version_name}更新\n"
+            result += "━━━━━━━━━━━━━━━━━━━━\n\n"
+            
+            for i, article in enumerate(articles, 1):
+                # 解析文章内容
+                soup = BeautifulSoup(article.body, "html.parser")
+                article_text = soup.get_text(separator=" ", strip=True)
+                
+                # 截取前 150 个字符作为预览
+                preview = article_text[:150]
+                if len(article_text) > 150:
+                    preview += "..."
+                
+                # 格式化单篇文章预览
+                result += f"{i}. 📰 {article.title}\n"
+                result += f"   🗓 {article.updated_at.strftime('%Y-%m-%d %H:%M')}\n"
+                result += f"   📝 {preview}\n"
+                result += f"   🔗 {article.html_url}\n"
+                
+                # 最后一篇不加分隔线
+                if i < len(articles):
+                    result += "\n" + "─" * 20 + "\n\n"
+            
+            result += "\n━━━━━━━━━━━━━━━━━━━━\n"
+            result += f"💡 使用 /mcbe_news 查看完整文章"
+            
+            yield event.plain_result(result)
+            logger.info(f"成功获取 {len(articles)} 篇文章预览")
+            
+        except Exception as e:
+            logger.error(f"获取文章列表失败: {str(e)}")
+            yield event.plain_result(f"❌ 获取文章列表失败: {str(e)}")
     
     @filter.command("mcbe_check")
     async def mcbe_check(self, event: AstrMessageEvent):
@@ -502,8 +612,18 @@ class MyPlugin(Star):
 
 📌 命令列表：
 
-/mcbe_news
-获取并展示最新的 MCBE 正式版更新
+/mcbe_news [版本]
+获取并展示最新的 MCBE 更新文章（带完整 AI 总结）
+• /mcbe_news - 正式版（默认）
+• /mcbe_news beta - Beta 测试版
+• /mcbe_news release - 正式版
+
+/mcbe_list [版本] [数量]
+获取最新 n 篇文章的简短预览列表（不含 AI 总结）
+• /mcbe_list - 最新 3 篇正式版（默认）
+• /mcbe_list 5 - 最新 5 篇正式版（最多 5 篇）
+• /mcbe_list beta - 最新 3 篇 Beta 版
+• /mcbe_list beta 5 - 最新 5 篇 Beta 版
 
 /mcbe_register
 在当前群聊中注册以接收自动更新通知
@@ -526,8 +646,9 @@ class MyPlugin(Star):
 💡 使用建议：
 1. 在需要接收通知的群聊中使用 /mcbe_register 注册
 2. 在 WebUI 配置页面设置 LLM 和监控选项
-3. 使用 /mcbe_check 测试是否正常工作
-4. 使用 /mcbe_status 查看运行状态
+3. 使用 /mcbe_list 快速浏览最新文章
+4. 使用 /mcbe_news 查看感兴趣文章的完整内容
+5. 使用 /mcbe_status 查看运行状态
 
 ❓ 如有问题，请查看插件的 README.md"""
         
