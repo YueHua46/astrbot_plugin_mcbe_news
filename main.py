@@ -3,7 +3,7 @@ from astrbot.api.star import Context, Star, register
 from astrbot.api import logger, AstrBotConfig
 import astrbot.api.message_components as Comp
 import httpx
-from models import ArticleListResponse, Article
+from .models import ArticleListResponse, Article
 from bs4 import BeautifulSoup
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -11,7 +11,6 @@ from typing import Set, List
 import json
 from pathlib import Path
 import re
-
 
 @register("mcbe_news", "astrbot_plugin_mcbe_news", "从 minecraft.net 官网上定时获取最新的更新 blog 并调用 LLM解析", "1.0.0")
 class MyPlugin(Star):
