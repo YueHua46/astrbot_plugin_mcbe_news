@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import re
 
-@register("mcbe_news", "astrbot_plugin_mcbe_news", "从 minecraft.net 官网上定时获取最新的更新 blog 并调用 LLM解析", "1.0.0")
+@register("mcbe_news", "astrbot_plugin_mcbe_news", "从 minecraft.net 官网上定时获取最新的更新 blog 并调用 LLM解析", "1.0.2")
 class MyPlugin(Star):
     
     bedrock_beta_news_api = "https://feedback.minecraft.net/api/v2/help_center/en-us/sections/360001185332/articles.json?sort_by=created_at&sort_order=desc"
