@@ -235,12 +235,12 @@ class MyPlugin(Star):
         header = f"📢 {article.title}\n"
         header += f"🗓 发布时间：{article.updated_at.strftime('%Y-%m-%d %H:%M')}\n"
         header += f"🔗 原文链接：{article.html_url}\n"
-        header += "━━━━━━━━━━━━━━━━━━━━\n"
+        header += "━━━━━━━━━━━━━━━━━━━━\n\n"
         
         components.append(Comp.Plain(header))
         
         # AI 总结
-        components.append(Comp.Plain(f"\n📝 AI 总结：\n{summary}\n\n"))
+        components.append(Comp.Plain(f"📝 AI 总结：\n{summary}\n\n"))
         
         # 按照原文顺序提取图片
         content_components = self._extract_content_with_images(soup)
