@@ -330,7 +330,8 @@ class MyPlugin(Star):
                 chat_provider_id=provider_id if provider_id else None
             )
             
-            return llm_response.strip()
+            # 从 LLMResponse 对象获取文本内容
+            return llm_response.completion_text.strip()
             
         except Exception as e:
             logger.error(f"LLM 总结失败: {e}")
